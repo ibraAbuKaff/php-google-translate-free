@@ -6,14 +6,14 @@ namespace Statickidz;
  *
  * Class to talk with Google Translator for free.
  *
- * @package PHP Google Translate Free;
- * @category Translation
- * @author Adrián Barrio Andrés
- * @author Paris N. Baltazar Salguero <sieg.sb@gmail.com>
+ * @package   PHP Google Translate Free;
+ * @category  Translation
+ * @author    Adrián Barrio Andrés
+ * @author    Paris N. Baltazar Salguero <sieg.sb@gmail.com>
  * @copyright 2016 Adrián Barrio Andrés
- * @license https://opensource.org/licenses/GPL-3.0 GNU General Public License 3.0
- * @version 2.0
- * @link https://statickidz.com/
+ * @license   https://opensource.org/licenses/GPL-3.0 GNU General Public License 3.0
+ * @version   2.0
+ * @link      https://statickidz.com/
  */
 
 /**
@@ -41,7 +41,6 @@ class GoogleTranslate
     {
         // Request translation
         $response = self::requestTranslation($source, $target, $text);
-
         // Get translation text
         // $response = self::getStringBetween("onmouseout=\"this.style.backgroundColor='#fff'\">", "</span></div>", strval($response));
 
@@ -71,40 +70,58 @@ class GoogleTranslate
         // Google translate URL
         $url = "https://translate.google.com/translate_a/single?client=at&dt=t&dt=ld&dt=qca&dt=rm&dt=bd&dj=1&hl=es-ES&ie=UTF-8&oe=UTF-8&inputm=2&otf=2&iid=1dd3b944-fa62-4b55-b330-74909a99969e";
 
-        $fields = array(
-            'sl' => urlencode($source),
-            'tl' => urlencode($target),
-            'q' => urlencode($text)
-        );
 
-        // URL-ify the data for the POST
-        $fields_string = "";
-        foreach ($fields as $key => $value) {
-            $fields_string .= $key . '=' . $value . '&';
+        $sentence = new \Sentence();
+        // Split into array of sentences
+        $numberOfLines              = 10;
+        $arrayOfSentences           = $sentence->split($text);
+        $numberOfRequestsForOneLine = ceil(count($arrayOfSentences) / $numberOfLines);
+        $textPerReq                 = [];
+        $offset                     = 0;
+        foreach (range(0, $numberOfRequestsForOneLine) as $reqIndex) {
+            $textPerReq[$reqIndex] = implode(' ', array_slice($arrayOfSentences, $offset, $numberOfLines));
+            $offset += $numberOfLines;
         }
 
-        rtrim($fields_string, '&');
+        $allResults = [];
+        foreach ($textPerReq as $text) {
+            $fields = [
+                'sl' => urlencode($source),
+                'tl' => urlencode($target),
+                'q'  => urlencode($text),
+            ];
 
-        // Open connection
-        $ch = curl_init();
+            // URL-ify the data for the POST
+            $fields_string = "";
+            foreach ($fields as $key => $value) {
+                $fields_string .= $key . '=' . $value . '&';
+            }
 
-        // Set the url, number of POST vars, POST data
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, count($fields));
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_ENCODING, 'UTF-8');
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'AndroidTranslate/5.3.0.RC02.130475354-53000263 5.1 phone TRANSLATE_OPM5_TEST_1');
+            rtrim($fields_string, '&');
 
-        // Execute post
-        $result = curl_exec($ch);
+            // Open connection
+            $ch = curl_init();
 
-        // Close connection
-        curl_close($ch);
 
-        return $result;
+            // Set the url, number of POST vars, POST data
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, count($fields));
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_ENCODING, 'UTF-8');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'AndroidTranslate/5.3.0.RC02.130475354-53000263 5.1 phone TRANSLATE_OPM5_TEST_1');
+
+            // Execute post
+            $result = curl_exec($ch);
+            // Close connection
+            curl_close($ch);
+            $allResults[] = $result;
+
+        }
+
+        return $allResults;
     }
 
     /**
@@ -115,15 +132,19 @@ class GoogleTranslate
      *
      * @return string A single string with the translation
      */
-    protected static function getSentencesFromJSON($json)
+    protected static function getSentencesFromJSON($jsonArr)
     {
-        $sentencesArray = json_decode($json, true);
-        $sentences = "";
+        $allSent = '';
+        foreach ($jsonArr as $json) {
+            $sentencesArray = json_decode($json, true);
+            $sentences      = "";
 
-        foreach ($sentencesArray["sentences"] as $s) {
-            $sentences .= isset($s["trans"]) ? $s["trans"] : '';
+            foreach ($sentencesArray["sentences"] as $s) {
+                $sentences .= isset($s["trans"]) ? $s["trans"] : '';
+            }
+            $allSent .= $sentences;
         }
 
-        return $sentences;
+        return $allSent;
     }
 }
