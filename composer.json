@@ -1,5 +1,5 @@
 {
-    "name": "statickidz/php-google-translate-free",
+    "name": "ibraAbuKaff/php-google-translate-free",
     "type": "library",
     "description": "Google Translate Free library for PHP",
     "version": "1.0.0",
@@ -33,7 +33,8 @@
         "source": "https://github.com/statickidz/php-google-translate-free/releases"
     },
     "require": {
-        "php": ">=5.4"
+        "php": ">=5.4",
+        "vanderlee/php-sentence": "1.0.2"
     },
     "require-dev": {
         "phpunit/phpunit": ">=4.8",
